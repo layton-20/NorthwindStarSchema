@@ -1,0 +1,214 @@
+CREATE TABLE dw.DWcustomers (
+	customer_id bpchar NOT NULL
+	,company_name CHARACTER VARYING(40) NOT NULL
+	,contact_name CHARACTER VARYING(30)
+	,contact_title CHARACTER VARYING(30)
+	,address CHARACTER VARYING(60)
+	,city CHARACTER VARYING(15)
+	,region CHARACTER VARYING(15)
+	,postal_code CHARACTER VARYING(10)
+	,country CHARACTER VARYING(15)
+	,phone CHARACTER VARYING(24)
+	,fax CHARACTER VARYING(24)
+	,customer_type_id bpchar
+	,customer_desc TEXT
+	);
+
+INSERT INTO dw.DWCustomers
+SELECT cust.customer_id
+	,company_name
+	,contact_name
+	,contact_title
+	,address
+	,city
+	,region
+	,postal_code
+	,country
+	,phone
+	,fax
+	,ccd.customer_type_id
+	,customer_demographics.customer_desc
+FROM customer_customer_demo ccd
+FULL OUTER JOIN customers cust ON cust.customer_id = ccd.customer_id
+FULL OUTER JOIN customer_demographics ON customer_demographics.customer_type_id = ccd.customer_type_id;
+
+CREATE TABLE dw.DWship_via (
+	shipper_id SMALLINT NOT NULL
+	,company_name CHARACTER VARYING(40) NOT NULL
+	,phone CHARACTER VARYING(24)
+	);
+
+INSERT INTO dw.DWShip_via
+SELECT *
+FROM shippers;
+
+CREATE TABLE dw.DWProducts (
+	product_id SMALLINT NOT NULL
+	,product_name CHARACTER VARYING(40) NOT NULL
+	,supplier_id SMALLINT
+	,category_id SMALLINT
+	,quantity_per_unit CHARACTER VARYING(20)
+	,unit_price REAL
+	,units_in_stock SMALLINT
+	,units_on_order SMALLINT
+	,reorder_level SMALLINT
+	,discontinued INTEGER NOT NULL
+	,category_name CHARACTER VARYING(15) NOT NULL
+	,category_description TEXT
+	,category_picture bytea
+	);
+
+
+INSERT INTO dw.DWProducts
+SELECT product_id
+	,product_name
+	,supplier_id
+	,products.category_id
+	,quantity_per_unit
+	,unit_price
+	,units_in_stock
+	,units_on_order
+	,reorder_level
+	,discontinued
+	,category_name
+	,description
+	,picture
+FROM products
+FULL OUTER JOIN categories ON products.category_id = categories.category_id;
+
+CREATE TABLE dw.DWSuppliers (
+	supplier_id SMALLINT NOT NULL
+	,company_name CHARACTER VARYING(40) NOT NULL
+	,contact_name CHARACTER VARYING(30)
+	,contact_title CHARACTER VARYING(30)
+	,address CHARACTER VARYING(60)
+	,city CHARACTER VARYING(15)
+	,region CHARACTER VARYING(15)
+	,postal_code CHARACTER VARYING(10)
+	,country CHARACTER VARYING(15)
+	,phone CHARACTER VARYING(24)
+	,fax CHARACTER VARYING(24)
+	,homepage TEXT
+	);
+
+
+INSERT INTO dw.DWSuppliers
+SELECT *
+FROM suppliers;
+
+CREATE TABLE dw.DWterritories (
+	employee_id SMALLINT
+	,territory_id CHARACTER VARYING(20) NOT NULL
+	,territory_description bpchar NOT NULL
+	,region_id SMALLINT NOT NULL
+	,region_description bpchar NOT NULL
+	);
+
+
+INSERT INTO dw.DWTerritories
+SELECT employee_territories.employee_id
+	,territories.territory_id
+	,territories.territory_description
+	,territories.region_id
+	,region.region_description
+FROM territories
+FULL OUTER JOIN employee_territories ON employee_territories.territory_id = territories.territory_id
+FULL OUTER JOIN region ON region.region_id = territories.region_id;
+
+CREATE TABLE dw.DWemployees (
+	employee_id SMALLINT NOT NULL
+	,last_name CHARACTER VARYING(20) NOT NULL
+	,first_name CHARACTER VARYING(10) NOT NULL
+	,title CHARACTER VARYING(30)
+	,title_of_courtesy CHARACTER VARYING(25)
+	,birth_date DATE
+	,hire_date DATE
+	,address CHARACTER VARYING(60)
+	,city CHARACTER VARYING(15)
+	,region CHARACTER VARYING(15)
+	,postal_code CHARACTER VARYING(10)
+	,country CHARACTER VARYING(15)
+	,home_phone CHARACTER VARYING(24)
+	,extension CHARACTER VARYING(4)
+	,photo bytea
+	,notes TEXT
+	,reports_to SMALLINT
+	,photo_path CHARACTER VARYING(255)
+	);
+
+
+INSERT INTO dw.DWEmployees
+SELECT *
+FROM Employees;
+
+CREATE TABLE dw.DWshipment_invoice (
+	order_id SMALLINT NOT NULL
+	,customer_id bpchar
+	,employee_id SMALLINT
+	,order_date DATE
+	,required_date DATE
+	,shipped_date DATE
+	,ship_via SMALLINT
+	,product_id SMALLINT NOT NULL
+	,unit_price REAL NOT NULL
+	,quantity SMALLINT NOT NULL
+	,discount REAL NOT NULL
+	,freight REAL
+	,ship_name CHARACTER VARYING(40)
+	,ship_address CHARACTER VARYING(60)
+	,ship_city CHARACTER VARYING(15)
+	,ship_region CHARACTER VARYING(15)
+	,ship_postal_code CHARACTER VARYING(10)
+	,ship_country CHARACTER VARYING(15)
+	);
+
+INSERT INTO dw.DWShipment_Invoice
+SELECT orders.order_id 
+	,orders.customer_id 
+	,orders.employee_id 
+	,orders.order_date 
+	,orders.required_date 
+	,orders.shipped_date 
+	,orders.ship_via 
+	,order_details.product_id 
+	,order_details.unit_price 
+	,order_details.quantity 
+	,order_details.discount 
+	,orders.freight
+	,orders.ship_name
+	,orders.ship_address
+	,orders.ship_city
+	,orders.ship_region
+	,orders.ship_postal_code
+	,orders.ship_country
+FROM orders
+FULL OUTER JOIN order_details ON order_details.order_id = orders.order_id;
+
+/* Constraints */
+ALTER TABLE ONLY DWcustomers ADD CONSTRAINT pk_customers PRIMARY KEY (customer_id);
+
+ALTER TABLE ONLY DWship_via ADD CONSTRAINT pk_shipper_via PRIMARY KEY (shipper_id);
+
+ALTER TABLE ONLY DWproducts ADD CONSTRAINT pk_products PRIMARY KEY (product_id);
+
+ALTER TABLE ONLY DWsuppliers ADD CONSTRAINT pk_suppliers PRIMARY KEY (supplier_id);
+
+ALTER TABLE ONLY DWterritories ADD CONSTRAINT pk_territories PRIMARY KEY (territory_id);
+
+ALTER TABLE ONLY DWemployees ADD CONSTRAINT pk_employees PRIMARY KEY (employee_id);
+
+ALTER TABLE ONLY DWShipment_Invoice ADD CONSTRAINT pk_shipment_invoice PRIMARY KEY (order_id, product_id);
+
+ALTER TABLE ONLY DWemployees ADD CONSTRAINT fk_employees_employees FOREIGN KEY (reports_to) REFERENCES DWemployees;
+
+ALTER TABLE ONLY DWShipment_Invoice ADD CONSTRAINT fk_shipment_invoice_customer FOREIGN KEY (customer_id) REFERENCES DWcustomers;
+
+ALTER TABLE ONLY DWShipment_Invoice ADD CONSTRAINT fk_shipment_invoice_employee FOREIGN KEY (employee_id) REFERENCES DWemployees;
+
+ALTER TABLE ONLY DWShipment_Invoice ADD CONSTRAINT fk_shipment_invoice_shipper FOREIGN KEY (shipper_id) REFERENCES DWship_via;
+
+ALTER TABLE ONLY DWShipment_Invoice ADD CONSTRAINT fk_shipment_invoice_product FOREIGN KEY (product_id) REFERENCES DWproducts;
+
+ALTER TABLE ONLY DWProducts ADD CONSTRAINT fk_products_suppliers FOREIGN KEY (supplier_id) REFERENCES suppliers;
+
+ALTER TABLE ONLY DWTerritories ADD CONSTRAINT fk_territories_employees FOREIGN KEY (employee_id) REFERENCES DWEmployees;
